@@ -1,0 +1,13 @@
+# Run output and contestant workspaces
+runs/
+
+# Local settings and secrets
+.env
+.public-check.local
+runner/commands.json
+runner/commands.local.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/

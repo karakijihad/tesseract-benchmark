@@ -1,0 +1,16 @@
+{
+  "checks": {
+    "required_files": 15,
+    "valid_input": 8,
+    "filters": 14,
+    "outputs": 10,
+    "source_urls": 3,
+    "sorting": 5,
+    "malformed_input": 4,
+    "empty_results": 3,
+    "tests": 15,
+    "research": 10,
+    "readme": 8,
+    "offline": 5
+  }
+}

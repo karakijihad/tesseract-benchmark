@@ -1,0 +1,19 @@
+{
+  "task_id": "evidence-desk-v1",
+  "title": "Evidence Desk",
+  "version": 1,
+  "runtime": {
+    "kind": "python",
+    "version": "3.12"
+  },
+  "time_limit_minutes": 30,
+  "network": {
+    "research_allowed": true,
+    "runtime_network_allowed": false
+  },
+  "references": {
+    "policy": "supplied",
+    "required_citations": 2
+  },
+  "contestants": ["tesseract", "claude-code", "codex"]
+}

@@ -1,0 +1,42 @@
+[
+  {
+    "id": "F-001",
+    "status": "open",
+    "severity": "high",
+    "category": "maintenance",
+    "title": "Bearing temperature trend",
+    "summary": "Temperature has increased across three inspection cycles.",
+    "source_url": "https://example.com/evidence/F-001",
+    "severity_weight": 3
+  },
+  {
+    "id": "F-002",
+    "status": "open",
+    "severity": "medium",
+    "category": "reliability",
+    "title": "Intermittent sensor dropout",
+    "summary": "The sensor missed two readings during a controlled test.",
+    "source_url": "https://example.com/evidence/F-002",
+    "severity_weight": 2
+  },
+  {
+    "id": "F-003",
+    "status": "closed",
+    "severity": "high",
+    "category": "maintenance",
+    "title": "Resolved lubrication alert",
+    "summary": "The alert was resolved and the follow-up inspection passed.",
+    "source_url": "https://example.com/evidence/F-003",
+    "severity_weight": 3
+  },
+  {
+    "id": "F-004",
+    "status": "open",
+    "severity": "low",
+    "category": "safety",
+    "title": "Guard label faded",
+    "summary": "The warning label is readable but should be replaced.",
+    "source_url": "https://example.com/evidence/F-004",
+    "severity_weight": 1
+  }
+]
