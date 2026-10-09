@@ -117,7 +117,7 @@ def run_contestant(
             env=environment,
         )
         try:
-            process.communicate(input=prompt, timeout=time_limit_minutes * 60)
+            process.communicate(input=prompt.encode("utf-8"), timeout=time_limit_minutes * 60)
         except subprocess.TimeoutExpired:
             timed_out = True
             process.kill()
