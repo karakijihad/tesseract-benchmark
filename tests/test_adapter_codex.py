@@ -120,7 +120,7 @@ def test_command_pins_model_effort_and_sandbox_and_reads_the_brief_from_stdin() 
     argv = CodexAdapter.command(good_settings())
     assert argv[:5] == ["codex", "exec", "--json", "-m", "gpt-6-luna"]
     assert argv[argv.index("-c") + 1] == 'model_reasoning_effort="high"'
-    assert argv[argv.index("--sandbox") + 1] == "workspace-write"
+    assert "--dangerously-bypass-approvals-and-sandbox" in argv and "--sandbox" not in argv
     assert argv[-1] == "-"
     assert "--ignore-user-config" in argv
     assert CodexAdapter.command(good_settings(program="other"))[0] == "other"

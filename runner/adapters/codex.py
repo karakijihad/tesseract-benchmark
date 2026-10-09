@@ -397,8 +397,11 @@ class CodexAdapter(Adapter):
             settings["model"],
             "-c",
             f'model_reasoning_effort="{settings["effort"]}"',
-            "--sandbox",
-            "workspace-write",
+            # No sandbox and no approvals, the same footing as Claude Code's
+            # bypassPermissions: the runner's throwaway workspace is the
+            # containment. Codex's Windows sandbox locks the files it writes
+            # away from the runner, which then cannot score or remove them.
+            "--dangerously-bypass-approvals-and-sandbox",
             "--ignore-user-config",
             "--skip-git-repo-check",
             "-",
