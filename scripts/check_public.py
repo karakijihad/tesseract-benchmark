@@ -43,6 +43,9 @@ PATTERNS = [
     r"\\\\\\\\[A-Za-z0-9._-]+\\\\[A-Za-z0-9$._-]+",
     r"/Users/[^/\s]+/",
     r"/home/[^/\s]+/",
+    # An email address, unless it is a no-reply address (commit trailers and
+    # GitHub's private author addresses), which names no one's inbox.
+    r"(?<![A-Za-z0-9._%+-])(?![A-Za-z0-9._%+-]*no-?reply@)(?![A-Za-z0-9._%+-]+@users\.noreply\.github\.com\b)"
     r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}",
     r"-----BEGIN [A-Z ]*PRIVATE KEY-----",
     r"\b(?:sk-[A-Za-z0-9_-]{20,}|gh[opsu]_[A-Za-z0-9]{20,}|AIza[0-9A-Za-z_-]{30,})",

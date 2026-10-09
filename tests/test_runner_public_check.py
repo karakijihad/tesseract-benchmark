@@ -129,6 +129,17 @@ def private_samples() -> dict[str, str]:
     }
 
 
+def test_a_no_reply_address_passes_and_a_real_one_does_not(repo, capsys):
+    at = "@"
+    base = commit(repo, {"a.txt": b"fine\n"}, "base")
+    trailer = commit(repo, {"b.txt": b"fine\n"}, f"work\n\nCo-Authored-By: Bot <noreply{at}example.com>\n"
+                     f"Signed-off-by: Someone <12345+someone{at}users.noreply.github.com>")
+    assert push(repo, trailer, base) == 0
+    real = commit(repo, {"c.txt": b"fine\n"}, f"ask jane.doe{at}example.com, or reply{at}example.com")
+    assert push(repo, real, trailer) == 1
+    assert real[:7] in capsys.readouterr().err
+
+
 def test_every_kind_of_private_detail_is_recognised(repo, capsys):
     samples = private_samples()
     commit(repo, {f"{index}.txt": f"value {text}\n".encode() for index, text in enumerate(samples.values())})
