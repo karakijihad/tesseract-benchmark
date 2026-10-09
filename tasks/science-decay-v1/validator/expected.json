@@ -1,0 +1,10 @@
+{
+  "half_life_s": 150.0,
+  "background_rate_per_s": 2.0,
+  "half_life_tolerance_fraction": 0.10,
+  "background_tolerance_fraction": 0.25,
+  "reference_half_life_uncertainty_s": 4.1,
+  "reference_background_uncertainty_per_s": 0.092,
+  "uncertainty_low_factor": 0.25,
+  "uncertainty_high_factor": 5.0
+}

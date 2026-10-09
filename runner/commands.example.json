@@ -1,5 +1,0 @@
-{
-  "tesseract": null,
-  "claude-code": ["claude", "--print"],
-  "codex": ["codex", "exec"]
-}

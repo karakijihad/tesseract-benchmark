@@ -1,0 +1,31 @@
+{
+  "slide_count_min": 8,
+  "slide_count_max": 12,
+  "minimum_notes_characters": 20,
+  "table_columns": {
+    "main_span_m": [1280, 1298, 1410, 1624, 1991, 2023],
+    "year_opened": [1937, 1964, 1981, 1998, 1998, 2022]
+  },
+  "required_facts": [
+    ["golden gate"],
+    ["san francisco"],
+    ["marin"],
+    ["1933"],
+    ["1937"],
+    ["1964"],
+    ["1280", "4200"],
+    ["2737", "8981"],
+    ["227", "746"],
+    ["27572"],
+    ["international orange"],
+    ["35 million", "$35m"],
+    ["safety net"],
+    ["verrazzano"]
+  ],
+  "sources": [
+    {"domain": "wikipedia.org", "name": "Wikipedia"},
+    {"domain": "nps.gov", "name": "National Park Service"},
+    {"domain": "goldengate.org", "name": "Golden Gate Bridge Highway and Transportation District"}
+  ],
+  "minimum_sources_on_closing_slide": 2
+}

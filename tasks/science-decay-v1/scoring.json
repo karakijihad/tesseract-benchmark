@@ -1,0 +1,12 @@
+{
+  "checks": {
+    "results_json": 10,
+    "half_life": 30,
+    "background": 10,
+    "half_life_uncertainty": 12,
+    "background_uncertainty": 6,
+    "fit_png": 10,
+    "report_method": 7,
+    "report_sources": 15
+  }
+}

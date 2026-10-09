@@ -1,0 +1,19 @@
+{
+  "tesseract": null,
+  "claude-code": {
+    "adapter": "command",
+    "argv": ["claude", "--print"],
+    "prompt": "stdin",
+    "model": null,
+    "unattended_mode": null,
+    "env_passthrough": ["ANTHROPIC_API_KEY"]
+  },
+  "codex": {
+    "adapter": "command",
+    "argv": ["codex", "exec", "Follow the instructions in {prompt_file}"],
+    "prompt": "file",
+    "model": null,
+    "unattended_mode": null,
+    "env_passthrough": ["OPENAI_API_KEY"]
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "seed": 7,
+  "half_life_s": 150.0,
+  "initial_rate_per_s": 30.0,
+  "background_rate_per_s": 2.0,
+  "bin_width_s": 15,
+  "bins": 80
+}

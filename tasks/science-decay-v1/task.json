@@ -1,6 +1,6 @@
 {
-  "task_id": "evidence-desk-v1",
-  "title": "Evidence Desk",
+  "task_id": "science-decay-v1",
+  "title": "Half-life from a Geiger counter",
   "version": 1,
   "runtime": {
     "kind": "python",
@@ -13,7 +13,7 @@
     "runtime_network_allowed": false
   },
   "references": {
-    "policy": "supplied",
+    "policy": "mixed",
     "required_citations": 2
   },
   "contestants": ["tesseract", "claude-code", "codex"]

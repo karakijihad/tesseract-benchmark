@@ -1,3 +1,5 @@
 #!/bin/sh
 # Enable once per clone: git config core.hooksPath .githooks
-exec python scripts/check_public.py
+# Git passes the refs being pushed on standard input; the script reads them from there.
+py=$(command -v python || command -v python3) || { echo "check_public: no python found, push refused" >&2; exit 1; }
+exec "$py" scripts/check_public.py --pre-push "$@"

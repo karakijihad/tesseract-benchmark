@@ -44,7 +44,7 @@ python -m runner.cli --help
 python -m runner.cli validate-task --task tasks/evidence-desk-v1
 ```
 
-The first command lists the subcommands (`validate-task`, `run` and `compare`). The second loads the Evidence Desk task and prints its settings and a hash of the task folder. Running real contestants needs a commands file that says how to launch each agent on your machine. `runner/README.md` explains how to write one and how to start a run.
+The first command lists the subcommands (`validate-task`, `run` and `compare`). The second loads the Evidence Desk task and prints its settings and a hash of the task folder. Running contestants needs a contestants file that says which adapter launches each agent on your machine. `runner/README.md` explains how to write one, how to start a run and how to compare runs.
 
 ## Reading order
 
@@ -73,14 +73,18 @@ Exact cache-token savings are the primary efficiency comparison. Estimated cost 
 
 ## Status
 
-The runner is a working scaffold. It loads a task, creates an artifact directory per contestant, starts contestants from configured commands, applies a time limit, runs the validator outside the contestant workspace and writes JSON and Markdown summaries. The Evidence Desk task package is included.
+The runner now closes five of the gates a fair comparison needs. The Evidence Desk task package is included.
+
+- **Adapter contract.** A contestant is started through an adapter that is given its workspace, the brief, the time limit and its own settings, and reports how the prompt was delivered, whether the launch was confirmed, the version and the usage. A generic `command` adapter and a test-only `stub` adapter exist.
+- **Workspace isolation.** Each contestant gets a fresh random directory under the system temp directory and no other path, and an allow-listed environment (operating system essentials, the variables its settings name, and nothing that points at the task, the run or this repository). The validator runs only afterwards, on a scratch copy of the workspace outside the run folder, with the same kind of environment. This is tested, and it is not an operating system sandbox: a contestant runs with your user rights and can still search the disk.
+- **Process lifecycle.** A contestant, its children and its grandchildren are stopped when its run ends, on Windows through a Job Object and elsewhere through a process group. No wait can hang, the validator has its own time limit, a failing validator gives a null score and never a zero, and one contestant's failure does not stop the run. The Linux and macOS path is written but has only been run on Windows.
+- **One run record.** One JSON schema is canonical and versioned. A missing value is `null`, never zero, every path is relative to the run folder, and `summary.md` is generated from `summary.json`.
+- **Comparison report.** `compare` prints one table per task with score, time, tokens, calls, sub-agents and cost with its basis, from one or more run folders.
 
 Results are not yet fair to rank. Before they are, the project still needs:
 
-- native adapters for each contestant, with confirmed prompt delivery
-- enforced workspace isolation, tested so that the validator and other contestants' workspaces are unreachable
-- one canonical JSON run record, with the Markdown summary generated from it
-- usage and cost capture for each contestant, recorded as exact, estimated or unavailable (a missing value is never recorded as zero)
+- the real adapters for TESSERACT, Claude Code and Codex, with confirmed prompt delivery and usage and cost capture recorded as exact, estimated or unavailable
+- detection of outside help, meaning a human, the monitor or another contestant doing the work
 
 After that, the plan is to run one controlled comparison, review its evidence, then expand to the other task families in `TASK_CATALOG.md`.
 

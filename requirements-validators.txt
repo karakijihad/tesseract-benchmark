@@ -1,0 +1,8 @@
+# Packages the task validators need (Python 3.12).
+# After installing playwright, run: python -m playwright install chromium
+python-pptx==1.0.2
+playwright
+pillow
+# Only needed to run the tests in tests/test_task_*.py (numpy builds the science reference answer)
+numpy
+pytest

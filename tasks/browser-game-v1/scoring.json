@@ -1,0 +1,21 @@
+{
+  "checks": {
+    "page_loads": 10,
+    "no_network": 3,
+    "api_present": 5,
+    "reset_state": 5,
+    "seeded_reset": 4,
+    "merge_directions": 8,
+    "single_merge": 7,
+    "random_boards": 8,
+    "score_increments": 5,
+    "move_return_value": 4,
+    "spawn_rules": 8,
+    "game_over_detect": 7,
+    "arrow_keys": 7,
+    "display_matches_board": 5,
+    "visible_score": 5,
+    "game_over_shown": 4,
+    "restart_control": 5
+  }
+}

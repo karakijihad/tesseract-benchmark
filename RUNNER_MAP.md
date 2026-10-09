@@ -6,7 +6,7 @@ The benchmark runner should accept a task folder and produce a complete, compara
 
 The task folder defines the work. The runner defines isolation, observation, validation, scoring, and reporting.
 
-This page describes the intended design. `runner/README.md` says what the runner does today. Where the two differ, the design is planned and not yet built. For example, the current runner reads `task.json` and `scoring.json` rather than the YAML files shown below, and its commands are `validate-task`, `run` and `compare`.
+This page describes the intended design. `runner/README.md` says what the runner does today. Where the two differ, the design is planned and not yet built. For example, the current runner reads `task.json` and `scoring.json` rather than the YAML files shown below, and its commands are `validate-task`, `run` and `compare`. Contestants are configured in a contestants JSON file that names an adapter and its settings for each contestant, not in a bare list of commands.
 
 ## Intended command
 
@@ -95,7 +95,7 @@ Do not accidentally mix these modes. If one contestant receives a helpful docume
 2. Record the machine, runtime, contestant versions, and time limit.
 3. Create one clean workspace per contestant.
 4. Copy the same task brief, starter files, and allowed references into each workspace.
-5. Keep the validator, scoring rules, and other contestant workspaces outside the contestant workspace.
+5. Keep the validator, scoring rules, and other contestant workspaces outside the contestant workspace. The runner does this by giving the contestant a fresh random directory under the system temp directory and no other path, and by running the validator afterwards on a copy of the workspace in the run folder. This is path isolation, not an operating system sandbox.
 6. Start each contestant through an adapter.
 7. Capture prompts, tool events, process events, URLs, file changes, output, and usage, including every sub-agent the contestant starts.
 8. Enforce the time limit and watch for outside help.
@@ -121,11 +121,18 @@ runner/
 ├── scorer.py
 ├── cost.py
 ├── report.py
+├── record.py
+├── isolation.py
 └── adapters/
+    ├── base.py
+    ├── command.py
+    ├── stub.py
     ├── tesseract.py
     ├── claude_code.py
     └── codex.py
 ```
+
+`record.py`, `isolation.py`, `report.py` and the `base`, `command` and `stub` adapters exist today. The three named contestant adapters are planned.
 
 The monitor can be driven by Claude Code, but the runner should keep the contestant adapters separate from the monitor. A Claude Code monitor and Claude Code contestant must never share a process, prompt history, working directory, or usage record.
 
@@ -137,16 +144,17 @@ runs/<run-id>/
 ├── summary.json
 ├── task-manifest.json
 ├── tesseract/
-│   ├── transcript.jsonl
-│   ├── events.jsonl
-│   ├── usage.json
+│   ├── record.json
+│   ├── transcript.log
 │   ├── validation.json
-│   └── artifact/
+│   └── workspace/
 ├── claude-code/
 │   └── ...
 └── codex/
     └── ...
 ```
+
+`task-manifest.json`, `events.jsonl` and a separate `usage.json` are planned and not written today. `RUN_RECORD_TEMPLATE.md` describes the record that is written.
 
 The artifact is what the contestant produced. The validator result is what the runner independently observed. The transcript explains how the artifact was produced. They must remain separate.
 
@@ -154,8 +162,8 @@ The artifact is what the contestant produced. The validator result is what the r
 
 - Same task hash for every contestant in one run.
 - Same starter hash for every contestant in one run.
-- Hidden validator is not readable from a contestant workspace.
-- One contestant cannot read another contestant's workspace.
+- Hidden validator is not readable from a contestant workspace. Today this means no path to it is given to the contestant, and it is never copied into a workspace.
+- One contestant cannot read another contestant's workspace. Today each workspace is a separate random directory and no path to another is given.
 - Monitor edits never enter a contestant artifact.
 - Sub-agent calls are counted in the totals of the contestant that started them.
 - A confirmed finding of outside help makes the run non-clean.

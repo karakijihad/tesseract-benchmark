@@ -4,8 +4,8 @@ runs/
 # Local settings and secrets
 .env
 .public-check.local
-runner/commands.json
-runner/commands.local.json
+runner/contestants*.json
+!runner/contestants.example.json
 
 # Python
 __pycache__/

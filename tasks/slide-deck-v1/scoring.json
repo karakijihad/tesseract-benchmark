@@ -1,0 +1,13 @@
+{
+  "checks": {
+    "opens": 10,
+    "slide_count": 8,
+    "title_slide": 8,
+    "no_empty_slides": 8,
+    "speaker_notes": 15,
+    "chart_or_table": 5,
+    "data_matches_source": 15,
+    "required_facts": 21,
+    "sources_slide": 10
+  }
+}
