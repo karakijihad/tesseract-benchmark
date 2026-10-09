@@ -1,19 +1,27 @@
 {
-  "tesseract": null,
+  "tesseract": {
+    "adapter": "tesseract",
+    "url": "http://127.0.0.1:8100",
+    "home": "<absolute path of the backend's TESSERACT_HOME>",
+    "model": "sonnet",
+    "max_budget_usd": 3,
+    "quiet_seconds": 60,
+    "tool_ask_policy": "allow"
+  },
   "claude-code": {
-    "adapter": "command",
-    "argv": ["claude", "--print"],
-    "prompt": "stdin",
-    "model": null,
-    "unattended_mode": null,
+    "adapter": "claude-code",
+    "model": "claude-sonnet-5-5",
+    "effort": "high",
+    "max_budget_usd": 3,
+    "permission_mode": "bypassPermissions",
     "env_passthrough": ["ANTHROPIC_API_KEY"]
   },
   "codex": {
-    "adapter": "command",
-    "argv": ["codex", "exec", "Follow the instructions in {prompt_file}"],
-    "prompt": "file",
-    "model": null,
-    "unattended_mode": null,
-    "env_passthrough": ["OPENAI_API_KEY"]
+    "adapter": "codex",
+    "model": "gpt-6-luna",
+    "effort": "high",
+    "max_budget_usd": 3,
+    "price_per_million": {"input": 0.1, "cached_input": 0.01, "output": 0.5},
+    "env_passthrough": ["OPENAI_API_KEY", "CODEX_HOME"]
   }
 }

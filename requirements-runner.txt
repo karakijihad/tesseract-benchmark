@@ -1,0 +1,4 @@
+# Needed by the tesseract adapter (runner/adapters/tesseract.py). Tested with 16.0.
+websockets>=14
+# Only the adapter's tests need this: they run a fake backend on the same stack as the real one.
+aiohttp

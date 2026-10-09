@@ -1,12 +1,18 @@
 from __future__ import annotations
 
 from .base import Adapter, AdapterResult, LaunchRequest
+from .claude_code import ClaudeCodeAdapter
+from .codex import CodexAdapter
 from .command import CommandAdapter
 from .stub import StubAdapter
+from .tesseract import TesseractAdapter
 
 ADAPTERS: dict[str, type[Adapter]] = {
+    ClaudeCodeAdapter.name: ClaudeCodeAdapter,
+    CodexAdapter.name: CodexAdapter,
     CommandAdapter.name: CommandAdapter,
     StubAdapter.name: StubAdapter,
+    TesseractAdapter.name: TesseractAdapter,
 }
 
 
