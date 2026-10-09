@@ -1,5 +1,7 @@
 """The claude-code adapter: required settings, the command it builds, and usage read from the stream.
 
+Every launch excludes the starter's own Claude Code setup and the record says so.
+
 A recorded stream (trimmed from a real headless run) turns into exact cost,
 token counts, tool calls and sub-agents; a run whose result event says the
 spend cap was hit is flagged; a stream with no result event reports no usage;
@@ -229,10 +231,23 @@ class TestSettings:
             "3",
             "--permission-mode",
             "bypassPermissions",
+            *claude_code.ISOLATION_FLAGS,
         ]
         command = ClaudeCodeAdapter.build_command({**SETTINGS, "program": "other-claude", "max_budget_usd": 2.5})
         assert command[0] == "other-claude"
         assert command[command.index("--max-budget-usd") + 1] == "2.5"
+
+    def test_the_starters_own_setup_is_always_switched_off(self) -> None:
+        command = ClaudeCodeAdapter.build_command(SETTINGS)
+        assert "--safe-mode" in command
+        assert command[command.index("--setting-sources") + 1] == "project"
+        assert "--strict-mcp-config" in command
+        assert "--disable-slash-commands" in command
+        assert json.loads(command[command.index("--settings") + 1]) == {"disableAllHooks": True}
+        # No setting can turn any of it off, and a setting naming one is refused.
+        for name in ("safe_mode", "setting_sources", "isolation", "settings"):
+            with pytest.raises(ValueError):
+                ClaudeCodeAdapter().validate_settings({**SETTINGS, name: True})
 
 
 class TestUsage:
@@ -363,6 +378,8 @@ class TestRun:
         assert result.usage.cost_usd == 0.4125 and result.usage.cost_basis == "exact"
         assert result.usage.tool_calls == 4 and result.usage.sub_agents == 2
         assert result.warnings == []
+        assert result.usage.raw["isolation"] == claude_code.ISOLATION_NOTE
+        assert "--safe-mode" in call["argv"] and "--strict-mcp-config" in call["argv"]
         assert transcript.startswith("command: ")
         assert to_bytes(SUCCESS_STREAM).decode("utf-8") in transcript
         assert "exit_status: 0" in transcript
@@ -371,6 +388,7 @@ class TestRun:
         result, _call, transcript = launch(tmp_path, to_bytes(BUDGET_STREAM), exit_code=1)
         assert result.exit_status == 1
         assert result.usage.raw["stopped_at_budget"] is True
+        assert result.usage.raw["isolation"] == claude_code.ISOLATION_NOTE
         assert result.usage.cost_usd == 0.07853
         assert any("spend cap" in warning for warning in result.warnings)
         assert to_bytes(BUDGET_STREAM).decode("utf-8") in transcript
@@ -379,6 +397,7 @@ class TestRun:
         result, _call, _transcript = launch(tmp_path, to_bytes(SUCCESS_STREAM[:-1]), exit_code=1)
         assert result.usage.cost_usd is None
         assert result.usage.cost_basis == "unavailable"
+        assert result.usage.raw["isolation"] == claude_code.ISOLATION_NOTE
         assert any("no result event" in warning for warning in result.warnings)
 
     def test_run_refuses_invalid_settings_before_starting_anything(self, tmp_path: Path) -> None:

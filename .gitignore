@@ -1,6 +1,10 @@
 # Run output and contestant workspaces
 runs/
 
+# Benchmark results (data/benchmark-<n>/). Kept local until a benchmark is
+# finished and retested; un-ignore a benchmark's folder to publish it.
+data/
+
 # Local settings and secrets
 .env
 .public-check.local

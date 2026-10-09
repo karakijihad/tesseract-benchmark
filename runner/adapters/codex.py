@@ -9,6 +9,14 @@ The brief goes in on standard input and the prompt argument is `-`. The
 its first line break, so an argument prompt cannot carry a brief. `--json`
 makes Codex print one JSON event per line.
 
+The contestant runs stock. Codex keeps its configuration, instructions, skills,
+rules, plugins and session history in one home folder, so each run gets a new,
+empty home that holds only a copy of the login file. The starter's own MCP
+servers, instruction file, skills and rules are not in it, and
+`--ignore-user-config` says the same thing a second way. The folder is removed
+when the run ends, whatever way it ends, because it holds a copy of the login.
+There is no setting to turn this off.
+
 Two sources of token counts feed the running estimate:
 
 - the `turn.completed` events on standard output, which carry the usage of the
@@ -30,10 +38,12 @@ import math
 import os
 from pathlib import Path
 import re
+import shutil
 import tempfile
 import time
 from typing import Any, Mapping
 
+from ..isolation import cleanup_tree
 from ..proc import POLL_SECONDS, KILL_REAP_SECONDS, SETTLE_SECONDS, Outcome, _new_group, run_captured
 from ..record import Usage
 from .base import (
@@ -57,6 +67,17 @@ OWN_KEYS = ("model", "effort", "max_budget_usd", "price_per_million", "program")
 # Item types Codex reports for work it did on its own. An item is counted when it
 # completes, once per id, so the started and completed events do not count twice.
 TOOL_ITEM_TYPES = ("command_execution", "file_change", "mcp_tool_call", "web_search", "collab_tool_call")
+
+# The login file is the only thing carried into a run's home folder.
+AUTH_FILENAME = "auth.json"
+# The home folder sits beside the real one rather than in the system temp
+# folder, which Codex refuses to create its helper programs in.
+SCRATCH_PREFIX = ".codex-bench-"
+ISOLATION_NOTE = (
+    "stock Codex: a new empty home holding only the login file, so user config (MCP servers, "
+    "instructions), skills, rules and plugins are excluded (CODEX_HOME, --ignore-user-config); "
+    "login kept"
+)
 
 ROLLOUT_POLL_SECONDS = 0.5
 READ_CHUNK_BYTES = 1024 * 1024
@@ -225,6 +246,27 @@ def codex_home(env: Mapping[str, str]) -> Path | None:
     return Path(base) / ".codex" if base else None
 
 
+def make_scratch_home(real_home: Path | None) -> Path:
+    """A new empty Codex home holding a copy of the login file, if there is one.
+
+    Raises OSError when the folder cannot be made or the login cannot be copied:
+    a run that silently started without its login would be measuring a failure
+    to sign in. The folder is removed here before the error leaves.
+    """
+    if real_home is None:
+        raise OSError("the contestant's environment names no home folder to take the login from")
+    parent = real_home.parent if real_home.parent.is_dir() else None
+    scratch = Path(tempfile.mkdtemp(prefix=SCRATCH_PREFIX, dir=parent))
+    try:
+        login = real_home / AUTH_FILENAME
+        if login.is_file():
+            shutil.copyfile(login, scratch / AUTH_FILENAME)
+    except OSError:
+        cleanup_tree(scratch)
+        raise
+    return scratch
+
+
 def _run_watched(
     argv: list[str],
     *,
@@ -357,6 +399,7 @@ class CodexAdapter(Adapter):
             f'model_reasoning_effort="{settings["effort"]}"',
             "--sandbox",
             "workspace-write",
+            "--ignore-user-config",
             "--skip-git-repo-check",
             "-",
         ]
@@ -376,20 +419,43 @@ class CodexAdapter(Adapter):
         argv = self.command(settings, program)
 
         warnings: list[str] = []
-        version = self._version(program, request, env, warnings)
-        write_transcript_header(request.transcript, template)
-        meter = Meter(settings["price_per_million"])
-        outcome, stopped = _run_watched(
-            argv,
-            cwd=request.workspace,
-            env=env,
-            stdin_bytes=request.brief.encode("utf-8"),
-            deadline_seconds=request.time_limit_seconds,
-            transcript=request.transcript,
-            meter=meter,
-            tail=RolloutTail(codex_home(env)),
-            max_budget_usd=float(settings["max_budget_usd"]),
-        )
+        real_home = codex_home(env)
+        try:
+            scratch = make_scratch_home(real_home)
+        except OSError as error:
+            return AdapterResult(
+                launch_confirmed=False,
+                launch_method="process_started",
+                error=f"Could not prepare the contestant's isolated home: {error}",
+                warnings=warnings,
+            )
+        try:
+            if not (scratch / AUTH_FILENAME).is_file():
+                warnings.append(
+                    "No Codex login file was found to copy, so the run depends on an API key in its environment"
+                )
+            env["CODEX_HOME"] = str(scratch)
+            version = self._version(program, request, env, warnings)
+            write_transcript_header(request.transcript, template)
+            meter = Meter(settings["price_per_million"])
+            outcome, stopped = _run_watched(
+                argv,
+                cwd=request.workspace,
+                env=env,
+                stdin_bytes=request.brief.encode("utf-8"),
+                deadline_seconds=request.time_limit_seconds,
+                transcript=request.transcript,
+                meter=meter,
+                tail=RolloutTail(scratch),
+                max_budget_usd=float(settings["max_budget_usd"]),
+            )
+        finally:
+            leftover = cleanup_tree(scratch)
+        if leftover is not None:
+            warnings.append(
+                f"Could not remove the contestant's temporary Codex home {scratch.name}, which holds a "
+                "copy of the login. Delete it by hand."
+            )
         write_transcript_footer(request.transcript, outcome.exit_status, outcome.timed_out)
         warnings.extend(outcome.warnings)
         if not outcome.started:
@@ -444,6 +510,7 @@ def build_usage(meter: Meter, settings: Mapping[str, Any], stopped: bool) -> Usa
         "turns": len(meter.turns),
         "turn_usage": [dict(turn) for turn in meter.turns],
         "tool_calls_by_type": meter.tool_counts(),
+        "isolation": ISOLATION_NOTE,
     }
     counted = meter.total()
     if meter.rollout_total is not None:

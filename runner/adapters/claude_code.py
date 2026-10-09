@@ -7,6 +7,14 @@ whatever the installed tool preferred would not be comparable with the next
 one. The brief goes in on standard input and the workspace is the working
 directory.
 
+The contestant runs stock. Whatever the person who started the benchmark has
+set up in Claude Code (settings, hooks, plugins, skills, slash commands, MCP
+servers, account connectors, personal instruction files and memory) is switched
+off on every launch by the flags in `ISOLATION_FLAGS`, and there is no setting
+to turn that off: a contestant that read the starter's own configuration would
+be measuring that configuration. The login is kept, because the flags leave
+authentication alone.
+
 Claude Code writes one JSON object per line. The last `result` event carries
 the run's total cost and token counts, and the `assistant` events carry the
 tool calls. Standard output is written to a temporary file (never a pipe, see
@@ -42,6 +50,27 @@ SETTING_NAMES = {
     "adapter", "env_passthrough", "unattended_mode",
     "model", "effort", "max_budget_usd", "permission_mode", "program",
 }
+# Always on. `--safe-mode` disables customizations (instruction files, skills,
+# installed plugins, hooks, MCP servers, custom commands and agents, output
+# styles) and leaves authentication, model choice and the built-in tools alone.
+# The other flags say the same thing a second way so that one of them being
+# dropped in a later release does not let the starter's setup back in: only
+# the workspace's own project settings are read, MCP servers come only from an
+# explicit list (there is none), skills are off, and hooks are off.
+ISOLATION_FLAGS = (
+    "--safe-mode",
+    "--setting-sources",
+    "project",
+    "--strict-mcp-config",
+    "--disable-slash-commands",
+    "--settings",
+    '{"disableAllHooks": true}',
+)
+ISOLATION_NOTE = (
+    "stock Claude Code: user settings, hooks, plugins, skills, slash commands, MCP servers, "
+    "connectors, instruction files and memory excluded (--safe-mode, --setting-sources project, "
+    "--strict-mcp-config, --disable-slash-commands, disableAllHooks); login kept"
+)
 VERSION_TIMEOUT_SECONDS = 20
 COPY_CHUNK_BYTES = 1024 * 1024
 MODEL_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:\[\]-]*$")
@@ -242,6 +271,7 @@ class ClaudeCodeAdapter(Adapter):
             str(settings["max_budget_usd"]),
             "--permission-mode",
             settings["permission_mode"],
+            *ISOLATION_FLAGS,
         ]
 
     def run(self, request: LaunchRequest) -> AdapterResult:
@@ -273,6 +303,7 @@ class ClaudeCodeAdapter(Adapter):
             copy_stream(sink, request.transcript)
             sink.seek(0)
             usage = usage_from_events(parse_events(sink))
+        usage.raw["isolation"] = ISOLATION_NOTE
         write_transcript_footer(request.transcript, outcome.exit_status, outcome.timed_out)
         warnings.extend(outcome.warnings)
         if not outcome.started:

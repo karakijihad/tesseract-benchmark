@@ -5,6 +5,10 @@ effort and takes the brief on standard input, that a recorded event stream
 becomes tokens, tool calls and an estimated cost, and that a run whose
 estimated cost reaches the cap is killed while it is still going. The running
 process in these tests is a small fake that prints events, never real Codex.
+
+Every launch also runs in a new empty Codex home that holds only a copy of the
+login, so the starter's own config and instructions never reach the contestant.
+That home is gone afterwards however the run ended, and the record says so.
 """
 from __future__ import annotations
 
@@ -18,6 +22,7 @@ import time
 
 import pytest
 
+from runner.adapters import codex
 from runner.adapters.base import LaunchRequest
 from runner.adapters.codex import CodexAdapter, Meter, build_usage
 
@@ -117,6 +122,7 @@ def test_command_pins_model_effort_and_sandbox_and_reads_the_brief_from_stdin() 
     assert argv[argv.index("-c") + 1] == 'model_reasoning_effort="high"'
     assert argv[argv.index("--sandbox") + 1] == "workspace-write"
     assert argv[-1] == "-"
+    assert "--ignore-user-config" in argv
     assert CodexAdapter.command(good_settings(program="other"))[0] == "other"
 
 
@@ -172,7 +178,10 @@ if sys.argv[1:] == ["--version"]:
     sys.exit(0)
 mode = os.environ["FAKE_MODE"]
 brief = sys.stdin.buffer.read().decode("utf-8")
-json.dump({"argv": sys.argv[1:], "brief": brief}, open("seen.json", "w"))
+home = os.environ["CODEX_HOME"]
+json.dump({"argv": sys.argv[1:], "brief": brief, "home": home, "home_files": sorted(os.listdir(home)),
+           "login": open(os.path.join(home, "auth.json")).read() if os.path.exists(os.path.join(home, "auth.json")) else None},
+          open("seen.json", "w"))
 
 def emit(event):
     print(json.dumps(event), flush=True)
@@ -215,10 +224,18 @@ def fake_program(tmp_path: Path) -> str:
     return str(shim)
 
 
-def launch(tmp_path: Path, mode: str, cap: float, limit: float = 60.0) -> tuple[object, bytes, Path]:
+def launch(
+    tmp_path: Path, mode: str, cap: float, limit: float = 60.0, login: bool = True
+) -> tuple[object, bytes, Path]:
     workspace = tmp_path / "ws"
     workspace.mkdir()
     home = tmp_path / "codex-home"
+    home.mkdir()
+    (home / "config.toml").write_text("[mcp_servers.mine]\nurl = 'http://127.0.0.1:1/mcp'\n", encoding="utf-8")
+    (home / "AGENTS.md").write_text("Always greet the operator.\n", encoding="utf-8")
+    (home / "skills").mkdir()
+    if login:
+        (home / "auth.json").write_text('{"token": "t"}', encoding="utf-8")
     env = {
         **os.environ,
         "FAKE_MODE": mode,
@@ -289,3 +306,64 @@ def test_the_time_limit_still_applies(tmp_path: Path) -> None:
     assert result.timed_out is True
     assert result.usage.raw["stopped_at_budget"] is False
     assert not (workspace / "survived.txt").exists()
+
+
+def leftover_homes(tmp_path: Path) -> list[str]:
+    return sorted(entry.name for entry in tmp_path.iterdir() if entry.name.startswith(codex.SCRATCH_PREFIX))
+
+
+def test_the_contestant_gets_an_empty_home_holding_only_the_login(tmp_path: Path) -> None:
+    result, _, workspace = launch(tmp_path, "finish", cap=100)
+    seen = json.loads((workspace / "seen.json").read_text(encoding="utf-8"))
+    real = tmp_path / "codex-home"
+    assert Path(seen["home"]) != real
+    assert seen["home_files"] == ["auth.json"]
+    assert seen["login"] == '{"token": "t"}'
+    assert result.usage.raw["isolation"] == codex.ISOLATION_NOTE
+    assert sorted(entry.name for entry in real.iterdir()) == ["AGENTS.md", "auth.json", "config.toml", "skills"]
+
+
+def test_the_contestants_home_is_removed_after_a_normal_run(tmp_path: Path) -> None:
+    _, _, workspace = launch(tmp_path, "finish", cap=100)
+    home = Path(json.loads((workspace / "seen.json").read_text(encoding="utf-8"))["home"])
+    assert not home.exists()
+    assert leftover_homes(tmp_path) == []
+
+
+def test_the_contestants_home_is_removed_after_a_stop_and_a_timeout(tmp_path: Path) -> None:
+    for index, (mode, cap, limit) in enumerate((("hang_after_turn", 1.5, 60.0), ("rollout", 1000, 3.0))):
+        folder = tmp_path / str(index)
+        folder.mkdir()
+        launch(folder, mode, cap=cap, limit=limit)
+        assert leftover_homes(folder) == []
+
+
+def test_the_contestants_home_is_removed_when_the_run_raises(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def explode(*args: object, **kwargs: object) -> None:
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(codex, "_run_watched", explode)
+    with pytest.raises(RuntimeError):
+        launch(tmp_path, "finish", cap=100)
+    assert leftover_homes(tmp_path) == []
+
+
+def test_a_login_that_cannot_be_copied_stops_the_launch_and_leaves_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def refuse(*args: object, **kwargs: object) -> None:
+        raise PermissionError("denied")
+
+    monkeypatch.setattr(codex.shutil, "copyfile", refuse)
+    result, transcript, workspace = launch(tmp_path, "finish", cap=100)
+    assert result.launch_confirmed is False and "isolated home" in result.error
+    assert transcript == b"" and not (workspace / "seen.json").exists()
+    assert leftover_homes(tmp_path) == []
+
+
+def test_a_missing_login_file_is_reported_and_the_run_still_goes_ahead(tmp_path: Path) -> None:
+    result, _, workspace = launch(tmp_path, "finish", cap=100, login=False)
+    seen = json.loads((workspace / "seen.json").read_text(encoding="utf-8"))
+    assert seen["home_files"] == [] and seen["login"] is None
+    assert result.launch_confirmed
+    assert any("login file" in warning for warning in result.warnings)

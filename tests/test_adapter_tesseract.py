@@ -316,7 +316,8 @@ def test_a_full_run_follows_the_whole_sequence(tmp_path, make_backend):
 
     usage = result.usage
     assert usage.cost_usd == pytest.approx(0.02) and usage.cost_basis == "exact"
-    assert (usage.input_tokens, usage.output_tokens) == (150, 30)
+    # 150 input of which 30 were cache reads: input is the full-rate part only.
+    assert (usage.input_tokens, usage.output_tokens) == (120, 30)
     assert (usage.cache_read_tokens, usage.cache_write_tokens) == (30, 5)
     assert (usage.model_calls, usage.tool_calls, usage.sub_agents) == (2, 2, 0)
     assert usage.raw["models"] == ["fake-model"]

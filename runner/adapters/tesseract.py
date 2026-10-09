@@ -705,8 +705,14 @@ class _Run:
         def tokens(key: str) -> int | None:
             return events.tokens.get(key) if events.found else None
 
+        # TESSERACT counts cache reads inside input_tokens. Every adapter reports
+        # input as the tokens billed at the full input rate, so take them out.
+        full_rate_input: int | None = None
+        if events.found:
+            full_rate_input = max(0, (tokens("input_tokens") or 0) - (tokens("cached_tokens") or 0))
+
         usage = Usage(
-            input_tokens=tokens("input_tokens"),
+            input_tokens=full_rate_input,
             output_tokens=tokens("output_tokens"),
             cache_read_tokens=tokens("cached_tokens"),
             cache_write_tokens=tokens("cache_creation_tokens"),
